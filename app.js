@@ -1,7 +1,17 @@
 // L'Empreinte du Boucher — Suivi de production vidéo
-// État persistant en localStorage (statut + date par vidéo)
+// Source de vérité : Supabase (table "videos"), synchronisée en temps réel.
+// Si Supabase n'est pas encore configuré (config.js), l'app tourne en mode
+// démo locale (localStorage) pour rester utilisable avant la mise en place.
 
 const STORAGE_KEY = 'edb_video_state_v1';
+
+const DEMO_MODE = !SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes('YOUR-PROJECT');
+
+let sbClient = null;
+let videosState = VIDEOS.map(v => ({ ...v }));
+let isAdmin = false;
+
+/* ---------------- Mode démo (localStorage) ---------------- */
 
 function loadOverrides() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
@@ -14,13 +24,16 @@ function saveOverride(id, patch) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
 }
 
-function getVideos() {
+function applyDemoOverrides() {
   const overrides = loadOverrides();
-  return VIDEOS.map(v => ({ ...v, ...(overrides[v.id] || {}) }));
+  videosState = VIDEOS.map(v => ({ ...v, ...(overrides[v.id] || {}) }));
 }
 
+/* ---------------- Data helpers ---------------- */
+
+function getVideos() { return videosState; }
+
 const MONTHS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
 function formatDateLong(iso) {
   const d = new Date(iso + 'T00:00:00');
@@ -37,6 +50,109 @@ function daysUntil(iso) {
   const target = new Date(iso + 'T00:00:00');
   return Math.round((target - today) / 86400000);
 }
+
+function rerenderActiveView() {
+  const active = document.querySelector('.view.active');
+  if (!active) return;
+  if (active.id === 'view-dashboard') renderDashboard();
+  if (active.id === 'view-videos') renderVideos();
+  if (active.id === 'view-calendar') renderCalendar();
+}
+
+/* ---------------- Statut : mise à jour ---------------- */
+
+async function updateStatus(id, newStatus) {
+  const video = videosState.find(v => v.id === id);
+  const previous = video.status;
+  video.status = newStatus; // optimiste
+
+  if (DEMO_MODE) {
+    saveOverride(id, { status: newStatus });
+    return;
+  }
+
+  const { error } = await sbClient
+    .from('videos')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    video.status = previous; // rollback
+    rerenderActiveView();
+    alert("La mise à jour n'a pas pu être enregistrée : " + error.message);
+  }
+}
+
+/* ---------------- Sync status indicator ---------------- */
+
+function setSyncStatus(state) {
+  const el = document.getElementById('sync-status');
+  el.classList.remove('live', 'offline');
+  if (state === 'live') {
+    el.classList.add('live');
+    el.innerHTML = `<span class="sync-dot"></span> Synchronisé en direct`;
+  } else if (state === 'offline') {
+    el.classList.add('offline');
+    el.innerHTML = `<span class="sync-dot"></span> Connexion perdue`;
+  } else if (state === 'demo') {
+    el.innerHTML = `<span class="sync-dot"></span> Mode démo local`;
+  } else {
+    el.innerHTML = `<span class="sync-dot"></span> Connexion…`;
+  }
+}
+
+/* ---------------- Auth (admin) ---------------- */
+
+function updateAdminUI() {
+  const zone = document.getElementById('admin-zone');
+  zone.innerHTML = isAdmin
+    ? `<div class="admin-pill">✎ Mode édition<button id="btn-logout">Se déconnecter</button></div>`
+    : `<button class="admin-link" id="btn-open-login">Connexion admin</button>`;
+
+  const openBtn = document.getElementById('btn-open-login');
+  if (openBtn) openBtn.addEventListener('click', openLoginModal);
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', () => sbClient.auth.signOut());
+}
+
+function openLoginModal() {
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-overlay').classList.remove('hidden');
+}
+
+function closeLoginModal() {
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('login-form').reset();
+}
+
+document.getElementById('login-close').addEventListener('click', closeLoginModal);
+document.getElementById('login-overlay').addEventListener('click', e => {
+  if (e.target.id === 'login-overlay') closeLoginModal();
+});
+
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const submitBtn = document.getElementById('login-submit');
+  const errorEl = document.getElementById('login-error');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Connexion…';
+  errorEl.classList.add('hidden');
+
+  const { error } = await sbClient.auth.signInWithPassword({ email, password });
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Se connecter';
+
+  if (error) {
+    errorEl.textContent = 'Identifiants incorrects.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  closeLoginModal();
+});
 
 /* ---------------- Navigation ---------------- */
 
@@ -141,11 +257,13 @@ function renderVideos() {
       <p class="video-accroche">${v.accroche}</p>
       <div class="video-card-bottom">
         <span class="video-date">${formatDateLong(v.date)}</span>
-        <select class="status-select" data-id="${v.id}">
-          ${Object.entries(STATUS_META).map(([key, m]) =>
-            `<option value="${key}" ${v.status === key ? 'selected' : ''}>${m.label}</option>`
-          ).join('')}
-        </select>
+        ${isAdmin ? `
+          <select class="status-select" data-id="${v.id}">
+            ${Object.entries(STATUS_META).map(([key, m]) =>
+              `<option value="${key}" ${v.status === key ? 'selected' : ''}>${m.label}</option>`
+            ).join('')}
+          </select>
+        ` : `<span class="badge badge-${v.status}">${STATUS_META[v.status].label}</span>`}
       </div>
     </div>
   `).join('');
@@ -156,7 +274,7 @@ function renderVideos() {
 
   document.querySelectorAll('.status-select').forEach(sel => {
     sel.addEventListener('change', () => {
-      saveOverride(Number(sel.dataset.id), { status: sel.value });
+      updateStatus(Number(sel.dataset.id), sel.value);
       renderVideos();
     });
   });
@@ -255,5 +373,54 @@ document.getElementById('cal-next').addEventListener('click', () => {
 
 /* ---------------- Init ---------------- */
 
-initCalendarToCurrent();
-renderDashboard();
+async function init() {
+  if (DEMO_MODE) {
+    applyDemoOverrides();
+    setSyncStatus('demo');
+    document.getElementById('admin-zone').innerHTML = '';
+  } else {
+    sbClient = supabase.createClient(
+      SUPABASE_CONFIG.url.startsWith('http') ? SUPABASE_CONFIG.url : `https://${SUPABASE_CONFIG.url}`,
+      SUPABASE_CONFIG.anonKey
+    );
+
+    setSyncStatus('connecting');
+
+    const { data, error } = await sbClient.from('videos').select('*');
+    if (!error && data) {
+      videosState = VIDEOS.map(v => {
+        const row = data.find(r => r.id === v.id);
+        return row ? { ...v, status: row.status, date: row.date } : v;
+      });
+    }
+
+    sbClient
+      .channel('videos-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, payload => {
+        const row = payload.new;
+        if (!row) return;
+        const v = videosState.find(x => x.id === row.id);
+        if (v) { v.status = row.status; v.date = row.date; }
+        rerenderActiveView();
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') setSyncStatus('live');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setSyncStatus('offline');
+      });
+
+    const { data: { session } } = await sbClient.auth.getSession();
+    isAdmin = !!session;
+    updateAdminUI();
+
+    sbClient.auth.onAuthStateChange((_event, session) => {
+      isAdmin = !!session;
+      updateAdminUI();
+      rerenderActiveView();
+    });
+  }
+
+  initCalendarToCurrent();
+  renderDashboard();
+}
+
+init();

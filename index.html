@@ -35,8 +35,14 @@
     </nav>
 
     <div class="sidebar-footer">
+      <div class="sync-status" id="sync-status">
+        <span class="sync-dot"></span> Connexion…
+      </div>
       Campagne · Juillet–Août 2026<br>
       12 vidéos · 3 / semaine
+      <div class="admin-zone" id="admin-zone">
+        <button class="admin-link" id="btn-open-login">Connexion admin</button>
+      </div>
     </div>
   </aside>
 
@@ -159,6 +165,30 @@
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="login-overlay">
+  <div class="modal modal-narrow">
+    <div class="modal-top">
+      <div>
+        <h2>Connexion admin</h2>
+      </div>
+      <button class="modal-close" id="login-close">✕</button>
+    </div>
+    <p class="login-sub">Réservé à l'agence. Les statuts restent en lecture seule pour les autres visiteurs.</p>
+    <form id="login-form" class="login-form">
+      <label class="login-label">Email
+        <input type="email" id="login-email" required autocomplete="username">
+      </label>
+      <label class="login-label">Mot de passe
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </label>
+      <p class="login-error hidden" id="login-error"></p>
+      <button type="submit" class="btn btn-primary login-submit" id="login-submit">Se connecter</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>

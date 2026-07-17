@@ -134,6 +134,69 @@ button { font-family: inherit; cursor: pointer; }
   padding-top: 20px;
 }
 
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--grey-600);
+  margin-bottom: 12px;
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grey-400);
+  flex-shrink: 0;
+}
+
+.sync-status.live .sync-dot { background: #2AA35C; box-shadow: 0 0 0 3px rgba(42,163,92,0.15); }
+.sync-status.offline .sync-dot { background: var(--red); }
+
+.admin-zone { margin-top: 14px; }
+
+.admin-link {
+  border: none;
+  background: none;
+  color: var(--grey-400);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.admin-link:hover { color: var(--red); }
+
+.admin-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  padding: 8px 8px 8px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.admin-pill button {
+  border: none;
+  background: var(--grey-900);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-readonly {
+  padding: 7px 13px;
+}
+
 /* ---------- Main content ---------- */
 .content {
   padding: 40px 48px 80px;
@@ -617,6 +680,55 @@ button { font-family: inherit; cursor: pointer; }
 
 .btn-ghost { background: var(--grey-100); color: var(--black); }
 .btn-ghost:hover { background: var(--grey-200); }
+
+.modal-narrow { max-width: 400px; }
+
+.login-sub {
+  font-size: 13px;
+  color: var(--grey-600);
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+
+.login-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--grey-900);
+}
+
+.login-label input {
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--black);
+  background: var(--grey-100);
+}
+
+.login-label input:focus {
+  outline: none;
+  border-color: var(--red);
+  background: var(--white);
+}
+
+.login-error {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red-dark);
+  background: var(--red-light);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.login-submit { width: 100%; margin-top: 4px; }
 
 /* ---------- Mobile ---------- */
 .mobile-nav { display: none; }
