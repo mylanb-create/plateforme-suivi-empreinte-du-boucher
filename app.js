@@ -83,6 +83,30 @@ async function updateStatus(id, newStatus) {
   }
 }
 
+async function updateDate(id, newDate) {
+  const video = videosState.find(v => v.id === id);
+  const previous = video.date;
+  if (previous === newDate) return;
+  video.date = newDate; // optimiste
+  renderCalendar();
+
+  if (DEMO_MODE) {
+    saveOverride(id, { date: newDate });
+    return;
+  }
+
+  const { error } = await sbClient
+    .from('videos')
+    .update({ date: newDate, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    video.date = previous; // rollback
+    renderCalendar();
+    alert("Le déplacement n'a pas pu être enregistré : " + error.message);
+  }
+}
+
 /* ---------------- Sync status indicator ---------------- */
 
 function setSyncStatus(state) {
@@ -331,6 +355,7 @@ function initCalendarToCurrent() {
 function renderCalendar() {
   const videos = getVideos();
   document.getElementById('cal-title').textContent = `${MONTHS_FR[calMonth]} ${calYear}`;
+  document.getElementById('calendar-hint').classList.toggle('hidden', !isAdmin);
 
   const firstOfMonth = new Date(calYear, calMonth, 1);
   const startOffset = (firstOfMonth.getDay() + 6) % 7; // Monday = 0
@@ -350,16 +375,53 @@ function renderCalendar() {
     const isToday = iso === today;
     const events = eventsByDate[iso] || [];
     cells += `
-      <div class="cal-day ${isToday ? 'today' : ''}">
+      <div class="cal-day ${isToday ? 'today' : ''}" data-date="${iso}">
         <div class="cal-daynum">${day}</div>
-        ${events.map(v => `<div class="cal-event status-${v.status}" data-open="${v.id}">#${v.id} ${v.titre}</div>`).join('')}
+        ${events.map(v => `<div class="cal-event status-${v.status}" data-open="${v.id}" ${isAdmin ? 'draggable="true"' : ''}>#${v.id} ${v.titre}</div>`).join('')}
       </div>`;
   }
 
   document.getElementById('cal-days').innerHTML = cells;
+
+  let suppressClick = false;
+
   document.querySelectorAll('#cal-days [data-open]').forEach(el => {
-    el.addEventListener('click', () => openModal(Number(el.dataset.open)));
+    el.addEventListener('click', () => {
+      if (suppressClick) return;
+      openModal(Number(el.dataset.open));
+    });
+
+    if (isAdmin) {
+      el.addEventListener('dragstart', e => {
+        suppressClick = false;
+        e.dataTransfer.setData('text/plain', el.dataset.open);
+        e.dataTransfer.effectAllowed = 'move';
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 0);
+      });
+    }
   });
+
+  if (isAdmin) {
+    document.querySelectorAll('.cal-day[data-date]').forEach(cell => {
+      cell.addEventListener('dragover', e => {
+        e.preventDefault();
+        cell.classList.add('drag-over');
+      });
+      cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+      cell.addEventListener('drop', e => {
+        e.preventDefault();
+        cell.classList.remove('drag-over');
+        const id = Number(e.dataTransfer.getData('text/plain'));
+        const newDate = cell.dataset.date;
+        if (id && newDate) updateDate(id, newDate);
+      });
+    });
+  }
 }
 
 document.getElementById('cal-prev').addEventListener('click', () => {

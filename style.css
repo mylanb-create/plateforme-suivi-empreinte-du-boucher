@@ -604,6 +604,23 @@ button { font-family: inherit; cursor: pointer; }
 .cal-event.status-planifie { border-left-color: var(--red); color: var(--red-dark); }
 .cal-event.status-poste { border-left-color: var(--red); background: var(--red); color: var(--white); }
 
+.calendar-hint {
+  color: var(--red-dark);
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.cal-event[draggable="true"] { cursor: grab; }
+.cal-event[draggable="true"]:active { cursor: grabbing; }
+.cal-event.dragging { opacity: 0.35; }
+
+.cal-day.drag-over {
+  background: var(--red-light);
+  outline: 2px dashed var(--red);
+  outline-offset: -2px;
+}
+
 /* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed;
