@@ -68,13 +68,9 @@ button { font-family: inherit; cursor: pointer; }
   width: 42px;
   height: 42px;
   border-radius: var(--radius-md);
-  background: var(--red);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-weight: 800;
-  font-size: 16px;
+  object-fit: contain;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
   flex-shrink: 0;
   box-shadow: var(--shadow-lift);
 }
@@ -736,10 +732,9 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .gate-mark {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-lg);
-  font-size: 20px;
   margin: 0 auto 20px;
 }
 
