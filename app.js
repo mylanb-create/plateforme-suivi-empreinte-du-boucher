@@ -42,6 +42,17 @@ function statusBadge(status, extraClass) {
   return `<span class="badge badge-${status} ${extraClass || ''}">${STATUS_ICONS[status]}${STATUS_META[status].label}</span>`;
 }
 
+const STATUS_CHIP_ICONS = {
+  a_monter: STATUS_ICONS.a_monter,
+  monte: STATUS_ICONS.monte,
+  planifie: STATUS_ICONS.planifie,
+  poste: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4 10-11"/></svg>'
+};
+
+function statusChip(status) {
+  return `<span class="status-chip status-chip-${status}" title="${STATUS_META[status].label}">${STATUS_CHIP_ICONS[status]}</span>`;
+}
+
 /* ---------------- Data helpers ---------------- */
 
 function getVideos() { return videosState; }
@@ -288,7 +299,7 @@ function renderVideos() {
   renderFilters();
   const videos = getVideos()
     .filter(v => activeFilter === 'all' || v.status === activeFilter)
-    .sort((a, b) => a.id - b.id);
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   document.getElementById('videos-grid').innerHTML = videos.map(v => `
     <div class="video-card">
@@ -297,6 +308,7 @@ function renderVideos() {
           <div class="video-number">VIDÉO ${String(v.id).padStart(2, '0')}</div>
           <h4 data-open="${v.id}">${v.titre}</h4>
         </div>
+        ${statusChip(v.status)}
       </div>
       <span class="video-tag">${v.categorie}</span>
       <p class="video-accroche">${v.accroche}</p>
