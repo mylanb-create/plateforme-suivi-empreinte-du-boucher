@@ -713,6 +713,48 @@ button { font-family: inherit; cursor: pointer; }
 .btn-ghost { background: var(--grey-100); color: var(--black); }
 .btn-ghost:hover { background: var(--grey-200); }
 
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(200,16,46,0.08), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(200,16,46,0.06), transparent 45%),
+    var(--grey-100);
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--grey-200);
+  text-align: center;
+}
+
+.gate-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  font-size: 20px;
+  margin: 0 auto 20px;
+}
+
+.gate-card h1 { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+
+.gate-card > p {
+  color: var(--grey-600);
+  font-size: 13.5px;
+  font-weight: 500;
+  margin: 8px 0 26px;
+}
+
+.gate-card .login-form { text-align: left; }
+
 .modal-narrow { max-width: 400px; }
 
 .login-sub {

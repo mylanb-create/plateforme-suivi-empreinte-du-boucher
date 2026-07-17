@@ -9,7 +9,25 @@
 </head>
 <body>
 
-<div class="app">
+<div class="gate" id="access-gate">
+  <div class="gate-card">
+    <div class="brand-mark gate-mark">EB</div>
+    <h1>L'Empreinte du Boucher</h1>
+    <p>Espace privé — suivi de production vidéo.</p>
+    <form id="gate-form" class="login-form">
+      <label class="login-label">Identifiant
+        <input type="text" id="gate-id" required autocomplete="username">
+      </label>
+      <label class="login-label">Mot de passe
+        <input type="password" id="gate-password" required autocomplete="current-password">
+      </label>
+      <p class="login-error hidden" id="gate-error"></p>
+      <button type="submit" class="btn btn-primary login-submit" id="gate-submit">Accéder à la plateforme</button>
+    </form>
+  </div>
+</div>
+
+<div class="app hidden" id="app-shell">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-mark">EB</div>
@@ -40,9 +58,7 @@
       </div>
       Campagne · Juillet–Août 2026<br>
       12 vidéos · 3 / semaine
-      <div class="admin-zone" id="admin-zone">
-        <button class="admin-link" id="btn-open-login">Connexion admin</button>
-      </div>
+      <div class="admin-zone" id="admin-zone"></div>
     </div>
   </aside>
 
@@ -125,7 +141,7 @@
   </main>
 </div>
 
-<nav class="mobile-nav">
+<nav class="mobile-nav hidden" id="mobile-nav">
   <button class="active" data-view="dashboard">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z" fill="currentColor"/></svg>
     Dashboard
@@ -158,28 +174,6 @@
       <button class="btn btn-primary" id="modal-copy">Copier le script</button>
       <button class="btn btn-ghost" id="modal-close2">Fermer</button>
     </div>
-  </div>
-</div>
-
-<div class="modal-overlay hidden" id="login-overlay">
-  <div class="modal modal-narrow">
-    <div class="modal-top">
-      <div>
-        <h2>Connexion admin</h2>
-      </div>
-      <button class="modal-close" id="login-close">✕</button>
-    </div>
-    <p class="login-sub">Réservé à l'agence. Les statuts restent en lecture seule pour les autres visiteurs.</p>
-    <form id="login-form" class="login-form">
-      <label class="login-label">Email
-        <input type="email" id="login-email" required autocomplete="username">
-      </label>
-      <label class="login-label">Mot de passe
-        <input type="password" id="login-password" required autocomplete="current-password">
-      </label>
-      <p class="login-error hidden" id="login-error"></p>
-      <button type="submit" class="btn btn-primary login-submit" id="login-submit">Se connecter</button>
-    </form>
   </div>
 </div>
 

@@ -138,57 +138,48 @@ function setSyncStatus(state) {
   }
 }
 
-/* ---------------- Auth (admin) ---------------- */
+/* ---------------- Accès (gate) + admin ---------------- */
+
+const ADMIN_EMAIL = 'mylanblln2@gmail.com';
+const GATE_EMAIL_DOMAIN = '@empreinte-boucher.local';
+
+function resolveLoginEmail(identifier) {
+  return identifier.includes('@') ? identifier : identifier + GATE_EMAIL_DOMAIN;
+}
 
 function updateAdminUI() {
   const zone = document.getElementById('admin-zone');
   zone.innerHTML = isAdmin
     ? `<div class="admin-pill">✎ Mode édition<button id="btn-logout">Se déconnecter</button></div>`
-    : `<button class="admin-link" id="btn-open-login">Connexion admin</button>`;
+    : `<button class="admin-link" id="btn-logout">Se déconnecter</button>`;
 
-  const openBtn = document.getElementById('btn-open-login');
-  if (openBtn) openBtn.addEventListener('click', openLoginModal);
-  const logoutBtn = document.getElementById('btn-logout');
-  if (logoutBtn) logoutBtn.addEventListener('click', () => sbClient.auth.signOut());
+  document.getElementById('btn-logout').addEventListener('click', () => sbClient.auth.signOut());
 }
 
-function openLoginModal() {
-  document.getElementById('login-error').classList.add('hidden');
-  document.getElementById('login-overlay').classList.remove('hidden');
-}
-
-function closeLoginModal() {
-  document.getElementById('login-overlay').classList.add('hidden');
-  document.getElementById('login-form').reset();
-}
-
-document.getElementById('login-close').addEventListener('click', closeLoginModal);
-document.getElementById('login-overlay').addEventListener('click', e => {
-  if (e.target.id === 'login-overlay') closeLoginModal();
-});
-
-document.getElementById('login-form').addEventListener('submit', async e => {
+document.getElementById('gate-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const submitBtn = document.getElementById('login-submit');
-  const errorEl = document.getElementById('login-error');
+  const identifier = document.getElementById('gate-id').value.trim();
+  const password = document.getElementById('gate-password').value;
+  const submitBtn = document.getElementById('gate-submit');
+  const errorEl = document.getElementById('gate-error');
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Connexion…';
   errorEl.classList.add('hidden');
 
-  const { error } = await sbClient.auth.signInWithPassword({ email, password });
+  const { error } = await sbClient.auth.signInWithPassword({
+    email: resolveLoginEmail(identifier),
+    password
+  });
 
   submitBtn.disabled = false;
-  submitBtn.textContent = 'Se connecter';
+  submitBtn.textContent = 'Accéder à la plateforme';
 
   if (error) {
-    errorEl.textContent = 'Identifiants incorrects.';
+    errorEl.textContent = 'Identifiant ou mot de passe incorrect.';
     errorEl.classList.remove('hidden');
-    return;
   }
-  closeLoginModal();
+  // Le succès est géré par onAuthStateChange (voir init()).
 });
 
 /* ---------------- Navigation ---------------- */
@@ -465,54 +456,87 @@ document.getElementById('cal-next').addEventListener('click', () => {
 
 /* ---------------- Init ---------------- */
 
-async function init() {
-  if (DEMO_MODE) {
-    applyDemoOverrides();
-    setSyncStatus('demo');
-    document.getElementById('admin-zone').innerHTML = '';
-  } else {
-    sbClient = supabase.createClient(
-      SUPABASE_CONFIG.url.startsWith('http') ? SUPABASE_CONFIG.url : `https://${SUPABASE_CONFIG.url}`,
-      SUPABASE_CONFIG.anonKey
-    );
+function showGate() {
+  document.getElementById('access-gate').classList.remove('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('mobile-nav').classList.add('hidden');
+}
 
-    setSyncStatus('connecting');
+function showApp() {
+  document.getElementById('access-gate').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  document.getElementById('mobile-nav').classList.remove('hidden');
+}
 
-    const { data, error } = await sbClient.from('videos').select('*');
-    if (!error && data) {
-      videosState = VIDEOS.map(v => {
-        const row = data.find(r => r.id === v.id);
-        return row ? { ...v, status: row.status, date: row.date } : v;
-      });
-    }
+let appStarted = false;
 
-    sbClient
-      .channel('videos-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, payload => {
-        const row = payload.new;
-        if (!row) return;
-        const v = videosState.find(x => x.id === row.id);
-        if (v) { v.status = row.status; v.date = row.date; }
-        rerenderActiveView();
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') setSyncStatus('live');
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setSyncStatus('offline');
-      });
+async function enterApp(session) {
+  showApp();
+  isAdmin = session.user.email === ADMIN_EMAIL;
+  updateAdminUI();
 
-    const { data: { session } } = await sbClient.auth.getSession();
-    isAdmin = !!session;
-    updateAdminUI();
+  if (appStarted) { rerenderActiveView(); return; }
+  appStarted = true;
 
-    sbClient.auth.onAuthStateChange((_event, session) => {
-      isAdmin = !!session;
-      updateAdminUI();
-      rerenderActiveView();
+  setSyncStatus('connecting');
+
+  const { data, error } = await sbClient.from('videos').select('*');
+  if (!error && data) {
+    videosState = VIDEOS.map(v => {
+      const row = data.find(r => r.id === v.id);
+      return row ? { ...v, status: row.status, date: row.date } : v;
     });
   }
 
+  sbClient
+    .channel('videos-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, payload => {
+      const row = payload.new;
+      if (!row) return;
+      const v = videosState.find(x => x.id === row.id);
+      if (v) { v.status = row.status; v.date = row.date; }
+      rerenderActiveView();
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') setSyncStatus('live');
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setSyncStatus('offline');
+    });
+
   initCalendarToCurrent();
   renderDashboard();
+}
+
+function leaveApp() {
+  appStarted = false;
+  isAdmin = false;
+  document.getElementById('gate-form').reset();
+  showGate();
+}
+
+async function init() {
+  if (DEMO_MODE) {
+    showApp();
+    applyDemoOverrides();
+    setSyncStatus('demo');
+    document.getElementById('admin-zone').innerHTML = '';
+    initCalendarToCurrent();
+    renderDashboard();
+    return;
+  }
+
+  sbClient = supabase.createClient(
+    SUPABASE_CONFIG.url.startsWith('http') ? SUPABASE_CONFIG.url : `https://${SUPABASE_CONFIG.url}`,
+    SUPABASE_CONFIG.anonKey
+  );
+
+  const { data: { session } } = await sbClient.auth.getSession();
+  if (session) await enterApp(session);
+  else showGate();
+
+  sbClient.auth.onAuthStateChange((_event, session) => {
+    if (session) enterApp(session);
+    else leaveApp();
+  });
 }
 
 init();

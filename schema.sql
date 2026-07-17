@@ -23,12 +23,18 @@ insert into public.videos (id, status, date) values
   (12, 'a_monter', '2026-08-14')
 on conflict (id) do nothing;
 
--- Sécurité : tout le monde peut lire (les 2 frères en lecture seule via le lien),
--- seule une session connectée (toi) peut modifier.
+-- Sécurité : la plateforme est privée. Seules les sessions connectées (le
+-- compte partagé des 2 frères en lecture seule + ton compte admin) peuvent
+-- lire les données. Sans session valide, l'API Supabase ne renvoie rien,
+-- même avec la clé publique — c'est ça qui rend le lien vraiment privé.
 alter table public.videos enable row level security;
 
-create policy "Public read" on public.videos
-  for select using (true);
+drop policy if exists "Public read" on public.videos;
+drop policy if exists "Authenticated read" on public.videos;
+drop policy if exists "Authenticated update" on public.videos;
+
+create policy "Authenticated read" on public.videos
+  for select using (auth.role() = 'authenticated');
 
 create policy "Authenticated update" on public.videos
   for update using (auth.role() = 'authenticated')
@@ -36,4 +42,12 @@ create policy "Authenticated update" on public.videos
 
 -- Temps réel : indispensable pour que les changements de statut
 -- apparaissent instantanément chez les frères sans recharger la page.
-alter publication supabase_realtime add table public.videos;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'videos'
+  ) then
+    alter publication supabase_realtime add table public.videos;
+  end if;
+end $$;
