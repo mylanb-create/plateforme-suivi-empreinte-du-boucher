@@ -311,7 +311,6 @@ function renderVideos() {
         ${statusChip(v.status)}
       </div>
       <span class="video-tag">${v.categorie}</span>
-      <p class="video-accroche">${v.accroche}</p>
       <div class="video-card-bottom">
         <span class="video-date">${formatDateLong(v.date)}</span>
         ${isAdmin ? `
@@ -349,7 +348,6 @@ function openModal(id) {
   document.getElementById('modal-badge').className = `badge badge-${v.status}`;
   document.getElementById('modal-badge').innerHTML = `${STATUS_ICONS[v.status]}${STATUS_META[v.status].label}`;
   document.getElementById('modal-date').textContent = formatDateLong(v.date);
-  document.getElementById('modal-script').textContent = v.script;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
@@ -362,15 +360,6 @@ document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-close2').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target.id === 'modal-overlay') closeModal();
-});
-document.getElementById('modal-copy').addEventListener('click', () => {
-  const v = getVideos().find(x => x.id === currentModalId);
-  navigator.clipboard.writeText(v.script).then(() => {
-    const btn = document.getElementById('modal-copy');
-    const original = btn.textContent;
-    btn.textContent = 'Copié !';
-    setTimeout(() => { btn.textContent = original; }, 1500);
-  });
 });
 
 /* ---------------- Calendar ---------------- */
