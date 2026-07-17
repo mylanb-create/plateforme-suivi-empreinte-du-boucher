@@ -112,7 +112,7 @@ async function updateDate(id, newDate) {
   const previous = video.date;
   if (previous === newDate) return;
   video.date = newDate; // optimiste
-  renderCalendar();
+  rerenderActiveView();
 
   if (DEMO_MODE) {
     saveOverride(id, { date: newDate });
@@ -126,7 +126,7 @@ async function updateDate(id, newDate) {
 
   if (error) {
     video.date = previous; // rollback
-    renderCalendar();
+    rerenderActiveView();
     alert("Le déplacement n'a pas pu être enregistré : " + error.message);
   }
 }
@@ -446,14 +446,43 @@ function renderCalendar() {
   }
 }
 
-document.getElementById('cal-prev').addEventListener('click', () => {
+function goToPrevMonth() {
   calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
   renderCalendar();
-});
-document.getElementById('cal-next').addEventListener('click', () => {
+}
+function goToNextMonth() {
   calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
   renderCalendar();
+}
+
+document.getElementById('cal-prev').addEventListener('click', goToPrevMonth);
+document.getElementById('cal-next').addEventListener('click', goToNextMonth);
+
+// Glisser une vidéo sur une flèche change de mois sans annuler le glissé,
+// pour pouvoir la déposer sur un jour d'un autre mois.
+let calNavTimer = null;
+
+function armCalNav(goFn) {
+  if (calNavTimer) return;
+  calNavTimer = setTimeout(() => {
+    goFn();
+    calNavTimer = null;
+    armCalNav(goFn);
+  }, 650);
+}
+
+function disarmCalNav() {
+  clearTimeout(calNavTimer);
+  calNavTimer = null;
+}
+
+[['cal-prev', goToPrevMonth], ['cal-next', goToNextMonth]].forEach(([id, goFn]) => {
+  const btn = document.getElementById(id);
+  btn.addEventListener('dragover', e => { e.preventDefault(); armCalNav(goFn); });
+  btn.addEventListener('dragleave', disarmCalNav);
+  btn.addEventListener('drop', e => { e.preventDefault(); disarmCalNav(); });
 });
+document.addEventListener('dragend', disarmCalNav);
 
 /* ---------------- Init ---------------- */
 
