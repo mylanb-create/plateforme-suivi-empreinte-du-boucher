@@ -29,6 +29,19 @@ function applyDemoOverrides() {
   videosState = VIDEOS.map(v => ({ ...v, ...(overrides[v.id] || {}) }));
 }
 
+/* ---------------- Icônes de statut ---------------- */
+
+const STATUS_ICONS = {
+  a_monter: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  monte: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 8.5 19 19M19 5 8.5 15.5"/></svg>',
+  planifie: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  poste: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5"/></svg>'
+};
+
+function statusBadge(status, extraClass) {
+  return `<span class="badge badge-${status} ${extraClass || ''}">${STATUS_ICONS[status]}${STATUS_META[status].label}</span>`;
+}
+
 /* ---------------- Data helpers ---------------- */
 
 function getVideos() { return videosState; }
@@ -197,7 +210,24 @@ document.querySelectorAll('.nav-item, .mobile-nav button').forEach(btn => {
 
 /* ---------------- Dashboard ---------------- */
 
+const STATUS_DESCRIPTIONS = {
+  a_monter: 'pas encore commencé',
+  monte: 'édition terminée',
+  planifie: 'date de post fixée',
+  poste: 'en ligne'
+};
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML = Object.entries(STATUS_META).map(([key, m]) => `
+    <div class="legend-row">
+      <span class="legend-icon badge-${key}">${STATUS_ICONS[key]}</span>
+      <span><strong>${m.label}</strong> — ${STATUS_DESCRIPTIONS[key]}</span>
+    </div>
+  `).join('');
+}
+
 function renderDashboard() {
+  renderLegend();
   const videos = getVideos();
   const counts = { a_monter: 0, monte: 0, planifie: 0, poste: 0 };
   videos.forEach(v => counts[v.status]++);
@@ -243,7 +273,7 @@ function renderDashboard() {
             <div class="u-title">${v.titre}</div>
             <div class="u-date">${formatDateLong(v.date)} · ${when}</div>
           </div>
-          <span class="badge badge-${v.status}">${STATUS_META[v.status].label}</span>
+          ${statusBadge(v.status)}
         </div>`;
       }).join('')
     : `<p style="color:var(--grey-600);font-size:14px;">Toutes les vidéos sont postées 🎉</p>`;
@@ -254,9 +284,9 @@ function renderDashboard() {
 let activeFilter = 'all';
 
 function renderFilters() {
-  const filters = [{ key: 'all', label: 'Toutes' }, ...Object.entries(STATUS_META).map(([key, m]) => ({ key, label: m.label }))];
+  const filters = [{ key: 'all', label: 'Toutes', icon: '' }, ...Object.entries(STATUS_META).map(([key, m]) => ({ key, label: m.label, icon: STATUS_ICONS[key] }))];
   document.getElementById('filters').innerHTML = filters.map(f =>
-    `<button class="filter-btn ${activeFilter === f.key ? 'active' : ''}" data-filter="${f.key}">${f.label}</button>`
+    `<button class="filter-btn ${activeFilter === f.key ? 'active' : ''}" data-filter="${f.key}">${f.icon}${f.label}</button>`
   ).join('');
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => { activeFilter = btn.dataset.filter; renderVideos(); });
@@ -287,7 +317,7 @@ function renderVideos() {
               `<option value="${key}" ${v.status === key ? 'selected' : ''}>${m.label}</option>`
             ).join('')}
           </select>
-        ` : `<span class="badge badge-${v.status}">${STATUS_META[v.status].label}</span>`}
+        ` : statusBadge(v.status)}
       </div>
     </div>
   `).join('');
@@ -314,7 +344,7 @@ function openModal(id) {
   document.getElementById('modal-tag').textContent = v.categorie;
   document.getElementById('modal-title').textContent = `${v.id}. ${v.titre}`;
   document.getElementById('modal-badge').className = `badge badge-${v.status}`;
-  document.getElementById('modal-badge').textContent = STATUS_META[v.status].label;
+  document.getElementById('modal-badge').innerHTML = `${STATUS_ICONS[v.status]}${STATUS_META[v.status].label}`;
   document.getElementById('modal-date').textContent = formatDateLong(v.date);
   document.getElementById('modal-script').textContent = v.script;
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -377,7 +407,7 @@ function renderCalendar() {
     cells += `
       <div class="cal-day ${isToday ? 'today' : ''}" data-date="${iso}">
         <div class="cal-daynum">${day}</div>
-        ${events.map(v => `<div class="cal-event status-${v.status}" data-open="${v.id}" ${isAdmin ? 'draggable="true"' : ''}>#${v.id} ${v.titre}</div>`).join('')}
+        ${events.map(v => `<div class="cal-event status-${v.status}" data-open="${v.id}" ${isAdmin ? 'draggable="true"' : ''}>${STATUS_ICONS[v.status]}#${v.id} ${v.titre}</div>`).join('')}
       </div>`;
   }
 
